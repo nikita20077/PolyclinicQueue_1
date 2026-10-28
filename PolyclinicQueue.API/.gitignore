@@ -1,0 +1,16 @@
+﻿# Папки сборки
+[Bb]in/
+[Oo]bj/
+
+# Файлы Visual Studio
+.vs/
+*.user
+*.suo
+
+# NuGet
+*.nupkg
+packages/
+
+# Логи и временные файлы
+*.log
+*.tmp

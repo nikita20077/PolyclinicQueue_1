@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Панель администратора</title>
+<script>document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-crumb="Администратор">
+<header class="topbar">
+  <div class="brand"><i class="fa-solid fa-house-medical"></i>Поликлиника MotoSalon · Админ</div>
+  <div class="user"><span id="userName"></span><button class="btn btn-light btn-sm" onclick="Auth.logout()"><i class="fa-solid fa-right-from-bracket"></i>Выйти</button></div>
+</header>
+
+<div class="container">
+  <nav class="breadcrumbs" id="breadcrumbs"></nav>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i>Дашборд</button>
+    <button class="tab-btn" data-tab="doctors"><i class="fa-solid fa-user-doctor"></i>Врачи</button>
+    <button class="tab-btn" data-tab="patients"><i class="fa-solid fa-users"></i>Пациенты</button>
+    <button class="tab-btn" data-tab="appointments"><i class="fa-solid fa-calendar-check"></i>Записи</button>
+    <button class="tab-btn" data-tab="ratings"><i class="fa-solid fa-star"></i>Рейтинги</button>
+    <button class="tab-btn" data-tab="stats"><i class="fa-solid fa-chart-column"></i>Статистика</button>
+  </nav>
+
+  <section id="tab-dashboard" class="tab active">
+    <div class="grid" id="statsGrid"></div>
+    <div class="grid-2">
+      <div class="card"><h3>Записи по статусам</h3><div class="chart-box"><canvas id="chStatus"></canvas></div></div>
+      <div class="card"><h3>Средний рейтинг врачей</h3><div class="chart-box"><canvas id="chRatings"></canvas></div></div>
+    </div>
+  </section>
+
+  <section id="tab-doctors" class="tab">
+    <div class="toolbar"><h2>Врачи</h2>
+      <div class="filters"><input id="docSearch" placeholder="Поиск: ФИО, специализация, телефон…"><button class="btn" id="btnAddDoctor"><i class="fa-solid fa-user-plus"></i>Добавить сотрудника</button></div></div>
+    <div class="card table-wrap"><table id="doctorsTable">
+      <thead><tr><th>Сотрудник</th><th>Специализация</th><th>Кабинет</th><th>Контакты</th><th>Стаж</th><th>Рейтинг</th><th>Статус</th><th class="nosort"></th></tr></thead>
+      <tbody id="doctorsBody"></tbody>
+    </table></div>
+  </section>
+
+  <section id="tab-patients" class="tab">
+    <div class="toolbar"><h2>Пациенты</h2>
+      <div class="filters">
+        <input id="pSearch" placeholder="Поиск: ФИО, телефон, полис…">
+        <input type="date" id="pDate" title="Дата регистрации">
+        <button class="btn btn-light" id="pReset"><i class="fa-solid fa-xmark"></i>Сбросить</button>
+      </div></div>
+    <div class="card table-wrap"><table id="patientsTable">
+      <thead><tr><th>ФИО</th><th>Дата рождения</th><th>Пол</th><th>Телефон</th><th>Полис</th><th>Email</th><th>Адрес</th><th>Регистрация</th><th class="nosort"></th></tr></thead>
+      <tbody id="patientsBody"></tbody>
+    </table></div>
+  </section>
+
+  <section id="tab-appointments" class="tab">
+    <div class="toolbar"><h2>Все записи <span class="muted" style="font-size:13px;font-weight:400">— нажмите на запись для подробностей</span></h2>
+      <div class="filters">
+        <input id="fSearch" placeholder="Пациент…">
+        <input type="date" id="fDate">
+        <select id="fDoctor"><option value="">Все врачи</option></select>
+        <select id="fStatus">
+          <option value="">Все статусы</option><option value="Scheduled">Ожидает</option><option value="InProgress">На приёме</option>
+          <option value="Completed">Завершён</option><option value="Cancelled">Отменён</option>
+        </select>
+        <button class="btn btn-light" id="fReset"><i class="fa-solid fa-xmark"></i>Сбросить</button>
+      </div></div>
+    <div class="card table-wrap"><table id="apptTable">
+      <thead><tr><th>Дата и время</th><th>№</th><th>Пациент</th><th>Врач</th><th>Статус</th><th class="nosort"></th></tr></thead>
+      <tbody id="apptBody"></tbody>
+    </table></div>
+  </section>
+
+  <section id="tab-ratings" class="tab">
+    <div class="toolbar"><h2>Рейтинги врачей <span class="muted" style="font-size:13px;font-weight:400">— нажмите на врача, чтобы прочитать отзывы</span></h2></div>
+    <div class="card table-wrap"><table id="ratingsTable">
+      <thead><tr><th>Врач</th><th>Специализация</th><th>Средняя оценка</th><th>Отзывов</th></tr></thead>
+      <tbody id="ratingsBody"></tbody>
+    </table></div>
+  </section>
+
+  <section id="tab-stats" class="tab">
+    <div class="toolbar"><h2>Статистика</h2>
+      <div class="filters"><select id="daysSel"><option value="7">7 дней</option><option value="14" selected>14 дней</option><option value="30">30 дней</option></select></div></div>
+    <div class="card"><h3>Приёмы и пациенты по дням</h3><div class="chart-box"><canvas id="chDays"></canvas></div></div>
+    <div class="grid-2">
+      <div class="card"><h3>Загрузка по специализациям</h3><div class="chart-box"><canvas id="chSpec"></canvas></div></div>
+      <div class="card table-wrap"><h3>Специализации</h3><table id="specTable">
+        <thead><tr><th>Специализация</th><th>Врачей</th><th>Записей</th></tr></thead><tbody id="specBody"></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="doctorModal"><div class="modal-box wide">
+  <div class="toolbar"><h2 id="doctorModalTitle"><i class="fa-solid fa-user-plus"></i>Новый сотрудник</h2><button class="btn-icon" onclick="closeModal('doctorModal')"><i class="fa-solid fa-xmark"></i></button></div>
+  <form id="doctorForm" novalidate>
+    <div class="form-section"><i class="fa-solid fa-id-card"></i>Личные данные</div>
+    <div class="form-row-3b">
+      <div class="form-group"><label>Фамилия *</label><input id="dLast"></div>
+      <div class="form-group"><label>Имя *</label><input id="dFirst"></div>
+      <div class="form-group"><label>Отчество</label><input id="dMiddle"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Дата рождения</label><input id="dBirth" type="date"></div>
+      <div class="form-group"><label>Пол</label><select id="dGender"><option value="">—</option><option>Мужской</option><option>Женский</option></select></div>
+    </div>
+
+    <div class="form-section"><i class="fa-solid fa-address-book"></i>Контактные данные</div>
+    <div class="form-row">
+      <div class="form-group"><label>Телефон *</label><input id="dPhone" type="tel" placeholder="+7 (900) 000-00-00"></div>
+      <div class="form-group"><label>Email</label><input id="dEmail" type="email"></div>
+    </div>
+    <div class="form-group"><label>Адрес проживания</label><input id="dAddress"></div>
+
+    <div class="form-section"><i class="fa-solid fa-briefcase-medical"></i>Работа</div>
+    <div class="form-row">
+      <div class="form-group"><label>Специализация (должность) *</label><input id="dSpec" list="specList" placeholder="Например: Стоматолог"><datalist id="specList">
+        <option>Терапевт</option><option>Стоматолог</option><option>Кардиолог</option><option>Невролог</option><option>Хирург</option>
+        <option>Офтальмолог</option><option>Отоларинголог</option><option>Педиатр</option><option>Гинеколог</option><option>Дерматолог</option>
+        <option>Эндокринолог</option><option>Уролог</option></datalist></div>
+      <div class="form-group"><label>Кабинет</label><input id="dCabinet"></div>
+    </div>
+    <div class="form-row-3b">
+      <div class="form-group"><label>Квалификационная категория</label><select id="dCategory"><option value="">Нет</option><option>Вторая</option><option>Первая</option><option>Высшая</option></select></div>
+      <div class="form-group"><label>Стаж, лет</label><input id="dExp" type="number" min="0" max="70"></div>
+      <div class="form-group"><label>Дата приёма на работу</label><input id="dHire" type="date"></div>
+    </div>
+    <div class="form-group"><label>Образование</label><input id="dEdu" placeholder="Вуз, специальность"></div>
+
+    <div class="form-section"><i class="fa-solid fa-key"></i>Учётная запись для входа</div>
+    <div class="form-row-3b">
+      <div class="form-group"><label>Логин <span id="dLoginNote"></span></label><input id="dLogin" autocomplete="off"></div>
+      <div class="form-group"><label>Пароль <span id="dPassNote"></span></label><input id="dPass" type="password" autocomplete="new-password"></div>
+      <div class="form-group"><label>Повтор пароля</label><input id="dPass2" type="password" autocomplete="new-password"></div>
+    </div>
+    <div class="form-group check"><input type="checkbox" id="dActive" checked><label style="margin:0">Сотрудник работает (принимает пациентов)</label></div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-light" onclick="closeModal('doctorModal')">Отмена</button>
+      <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i>Сохранить сотрудника</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal" id="reviewsModal"><div class="modal-box wide">
+  <div class="toolbar"><h2 id="revTitle">Отзывы</h2><button class="btn-icon" onclick="closeModal('reviewsModal')"><i class="fa-solid fa-xmark"></i></button></div>
+  <div id="revBody"></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

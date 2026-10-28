@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кабинет врача</title>
+<script>document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-crumb="Кабинет врача">
+<header class="topbar">
+  <div class="brand"><i class="fa-solid fa-house-medical"></i>Поликлиника MotoSalon</div>
+  <div class="user"><span id="userName"></span><button class="btn btn-light btn-sm" onclick="Auth.logout()"><i class="fa-solid fa-right-from-bracket"></i>Выйти</button></div>
+</header>
+
+<div class="container">
+  <nav class="breadcrumbs" id="breadcrumbs"></nav>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="reception"><i class="fa-solid fa-stethoscope"></i>Приём</button>
+    <button class="tab-btn" data-tab="file"><i class="fa-solid fa-book-medical"></i>Картотека пациентов</button>
+    <button class="tab-btn" data-tab="stats"><i class="fa-solid fa-chart-line"></i>Моя статистика</button>
+    <button class="tab-btn" data-tab="reviews"><i class="fa-solid fa-star"></i>Мои отзывы</button>
+  </nav>
+
+  <!-- ===== Приём ===== -->
+  <section id="tab-reception" class="tab active">
+    <div class="split">
+      <aside>
+        <div class="toolbar"><h2><i class="fa-solid fa-users-line"></i>Очередь сегодня</h2><button class="btn btn-light btn-sm" id="btnRefresh" title="Обновить"><i class="fa-solid fa-rotate"></i></button></div>
+        <div id="queueList"></div>
+        <div class="toolbar" style="margin-top:20px"><h3><i class="fa-regular fa-calendar-check"></i>Предстоящие записи</h3></div>
+        <div id="upcomingList"></div>
+      </aside>
+
+      <main>
+        <div id="noSelection" class="card empty"><i class="fa-solid fa-hand-pointer" style="font-size:32px"></i><br>Нажмите на пациента в очереди, чтобы открыть карточку и записать диагноз</div>
+
+        <div id="patientPanel" class="hidden">
+          <div id="allergyBanner"></div>
+          <div id="flagBanners"></div>
+
+          <div class="card">
+            <div class="toolbar"><h2 id="pName"></h2><span id="pStatus"></span></div>
+            <div id="pInfo"></div>
+            <h3 style="margin-top:18px"><i class="fa-solid fa-weight-scale"></i>BMI-калькулятор</h3>
+            <div class="form-row-3">
+              <div class="form-group"><label>Рост, см</label><input type="number" id="bmiH" min="50" max="250"></div>
+              <div class="form-group"><label>Вес, кг</label><input type="number" id="bmiW" min="2" max="400" step="0.1"></div>
+              <div class="form-group"><label>Индекс массы тела</label><div id="bmiRes" class="bmi-result">—</div></div>
+            </div>
+          </div>
+
+          <div class="card"><h3><i class="fa-solid fa-clipboard-list"></i>Анкета пациента</h3><div id="qInfo"></div></div>
+
+          <div class="card">
+            <h3><i class="fa-solid fa-book-medical"></i>Книжка обращений пациента <span class="pill" id="specPill"></span></h3>
+            <p class="muted" style="font-size:13px">Показаны обращения к врачам вашей специальности.</p>
+            <div class="timeline" id="timeline"></div>
+          </div>
+
+          <div class="card">
+            <h3><i class="fa-solid fa-file-prescription"></i>Приём: диагноз и назначения</h3>
+            <div class="form-group"><label>Диагноз (МКБ-10) *</label><input id="diagnosis" list="mkbList" placeholder="Начните вводить код или название: K02, гипертония…"><datalist id="mkbList"></datalist></div>
+            <div class="form-group"><label>Назначения (каждое лекарство — с новой строки)</label><textarea id="prescriptions"></textarea></div>
+            <div class="form-group"><label>Рекомендации</label><textarea id="recommendations"></textarea></div>
+            <div class="modal-actions" style="justify-content:flex-start">
+              <button class="btn btn-success" id="btnStart"><i class="fa-solid fa-play"></i>Начать приём</button>
+              <button class="btn" id="btnFinish"><i class="fa-solid fa-check"></i>Завершить приём</button>
+              <button class="btn btn-warning" id="btnRx" disabled><i class="fa-solid fa-file-pdf"></i>Выписать рецепт</button>
+            </div>
+            <p class="muted" id="startNote" style="font-size:13px;margin-top:8px"></p>
+          </div>
+
+          <div class="card">
+            <h3><i class="fa-solid fa-calendar-plus"></i>Записать на следующий приём</h3>
+            <p class="muted" style="font-size:13px">Запись сразу появится у пациента в разделе «Ожидаются».</p>
+            <div class="form-row">
+              <div><label>Дата</label><div class="calendar" id="rcCal"></div></div>
+              <div><label>Время <span id="rcLbl" class="muted"></span></label><div class="slots" id="rcSlots"></div></div>
+            </div>
+            <div class="modal-actions" style="justify-content:flex-start;margin-top:14px">
+              <button class="btn" id="rcBtn" disabled><i class="fa-solid fa-check"></i>Записать пациента</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ===== Картотека ===== -->
+  <section id="tab-file" class="tab">
+    <div class="split">
+      <aside>
+        <div class="toolbar"><h2><i class="fa-solid fa-book-medical"></i>Мои пациенты</h2></div>
+        <p class="muted" id="fileHint" style="font-size:13px"></p>
+        <div class="form-group"><input id="fSearch" placeholder="Поиск: ФИО, телефон, полис…"></div>
+        <div id="fList"></div>
+      </aside>
+      <main>
+        <div id="fEmpty" class="card empty"><i class="fa-solid fa-book-open" style="font-size:32px"></i><br>Выберите пациента, чтобы открыть его книжку обращений</div>
+        <div id="fPanel" class="hidden">
+          <div class="card"><div class="toolbar"><h2 id="fName"></h2></div><div id="fInfo"></div></div>
+          <div class="card">
+            <h3><i class="fa-solid fa-book-medical"></i>Книжка историй обращений <span class="pill" id="fSpecPill"></span></h3>
+            <div class="timeline" id="fTimeline"></div>
+          </div>
+          <div class="card">
+            <h3><i class="fa-solid fa-calendar-plus"></i>Записать на приём</h3>
+            <div class="form-row">
+              <div><label>Дата</label><div class="calendar" id="fcCal"></div></div>
+              <div><label>Время <span id="fcLbl" class="muted"></span></label><div class="slots" id="fcSlots"></div></div>
+            </div>
+            <div class="modal-actions" style="justify-content:flex-start;margin-top:14px">
+              <button class="btn" id="fcBtn" disabled><i class="fa-solid fa-check"></i>Записать пациента</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ===== Статистика ===== -->
+  <section id="tab-stats" class="tab">
+    <div class="grid" id="stCards"></div>
+    <div class="grid-2">
+      <div class="card"><h3>Приёмы за 14 дней</h3><div class="chart-box"><canvas id="stDay"></canvas></div></div>
+      <div class="card"><h3>Статусы записей</h3><div class="chart-box"><canvas id="stStatus"></canvas></div></div>
+    </div>
+    <div class="card"><h3>Частые диагнозы</h3><div class="chart-box"><canvas id="stDiag"></canvas></div></div>
+  </section>
+
+  <!-- ===== Отзывы ===== -->
+  <section id="tab-reviews" class="tab">
+    <div class="card"><div id="revSummary"></div></div>
+    <div class="card"><h3>Отзывы пациентов</h3><div id="revList"></div></div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/prescription.js"></script>
+<script src="/js/doctor.js"></script>
+</body>
+</html>

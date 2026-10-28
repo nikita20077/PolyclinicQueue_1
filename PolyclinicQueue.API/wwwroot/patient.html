@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кабинет пациента</title>
+<script>document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-crumb="Кабинет пациента">
+<header class="topbar">
+  <div class="brand"><i class="fa-solid fa-house-medical"></i>Поликлиника MotoSalon</div>
+  <div class="user"><span id="userName"></span><button class="btn btn-light btn-sm" onclick="Auth.logout()"><i class="fa-solid fa-right-from-bracket"></i>Выйти</button></div>
+</header>
+
+<div class="container">
+  <nav class="breadcrumbs" id="breadcrumbs"></nav>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="home"><i class="fa-solid fa-house"></i>Главная</button>
+    <button class="tab-btn" data-tab="book"><i class="fa-solid fa-calendar-plus"></i>Запись к врачу</button>
+    <button class="tab-btn" data-tab="questionnaire"><i class="fa-solid fa-clipboard-list"></i>Анкета</button>
+    <button class="tab-btn" data-tab="queue"><i class="fa-solid fa-users-line"></i>Моя очередь</button>
+    <button class="tab-btn" data-tab="history"><i class="fa-solid fa-timeline"></i>История записей</button>
+  </nav>
+
+  <!-- Главная -->
+  <section id="tab-home" class="tab active">
+    <div class="card"><h2 id="greeting"></h2><div id="nextAppt"></div></div>
+    <div class="grid" id="homeStats"></div>
+    <div class="card"><h3><i class="fa-solid fa-list"></i>Мои записи <span class="muted" style="font-weight:400;font-size:13px">— нажмите на запись, чтобы увидеть подробности</span></h3>
+      <div class="table-wrap"><table id="myApptsTable">
+        <thead><tr><th>Дата и время</th><th>Врач</th><th>Кабинет</th><th>№</th><th>Статус</th><th class="nosort"></th></tr></thead>
+        <tbody id="myAppts"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- Запись к врачу -->
+  <section id="tab-book" class="tab">
+    <div class="card">
+      <div class="toolbar"><h2><i class="fa-solid fa-user-doctor"></i>1. Выберите врача</h2>
+        <select id="specFilter" style="width:auto;min-width:200px"><option value="">Все специальности</option></select></div>
+      <div class="doctor-pick" id="doctorPick"></div>
+    </div>
+    <div class="card">
+      <h2><i class="fa-regular fa-calendar"></i>2. Дата и время</h2>
+      <div class="form-row">
+        <div><label>Дата</label><div class="calendar" id="bCal"></div></div>
+        <div><label>Свободное время <span id="slotDate" class="muted"></span></label><div class="slots" id="slots"></div></div>
+      </div>
+      <div class="modal-actions" style="justify-content:flex-start;margin-top:20px">
+        <button class="btn" id="btnBook" disabled><i class="fa-solid fa-check"></i>Записаться</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Анкета -->
+  <section id="tab-questionnaire" class="tab">
+    <div class="card">
+      <h2><i class="fa-solid fa-clipboard-list"></i>Анкета перед приёмом</h2>
+      <div class="form-group"><label>Запись</label><select id="qAppt"></select></div>
+      <div id="qForm" class="hidden">
+        <div class="form-group"><label>Жалобы *</label><div class="with-mic"><textarea id="qComplaints"></textarea><button type="button" class="btn-mic" id="micC" title="Говорить"><i class="fa-solid fa-microphone"></i></button></div></div>
+        <div class="form-group"><label>Хронические заболевания</label><div class="with-mic"><textarea id="qChronic"></textarea><button type="button" class="btn-mic" id="micCh" title="Говорить"><i class="fa-solid fa-microphone"></i></button></div></div>
+        <div class="form-group"><label>Аллергии</label><div class="with-mic"><textarea id="qAllergies"></textarea><button type="button" class="btn-mic" id="micA" title="Говорить"><i class="fa-solid fa-microphone"></i></button></div></div>
+        <div class="form-group"><label>Принимаемые лекарства</label><div class="with-mic"><textarea id="qMeds"></textarea><button type="button" class="btn-mic" id="micM" title="Говорить"><i class="fa-solid fa-microphone"></i></button></div></div>
+        <button class="btn" id="btnSaveQ"><i class="fa-solid fa-floppy-disk"></i>Сохранить анкету</button>
+      </div>
+      <div id="qEmpty" class="empty hidden">Нет активных записей. Сначала запишитесь к врачу.</div>
+    </div>
+  </section>
+
+  <!-- Моя очередь -->
+  <section id="tab-queue" class="tab">
+    <div class="card">
+      <div id="queueEmpty" class="empty hidden">У вас нет активных записей</div>
+      <div id="queueInfo"></div>
+    </div>
+  </section>
+
+  <!-- История записей -->
+  <section id="tab-history" class="tab">
+    <div class="card">
+      <h2><i class="fa-solid fa-hourglass-half"></i>Ожидаются</h2>
+      <p class="muted">Предстоящие записи — в том числе те, на которые вас записал врач после приёма.</p>
+      <div id="upcomingList"></div>
+    </div>
+    <div class="card"><h2><i class="fa-solid fa-timeline"></i>История обращений</h2><div class="timeline" id="timeline"></div></div>
+  </section>
+</div>
+
+<!-- Оценка врача -->
+<div class="modal" id="reviewModal"><div class="modal-box" style="text-align:center">
+  <h2><i class="fa-solid fa-star"></i>Оцените приём</h2>
+  <p class="muted" id="reviewDoctor"></p>
+  <div class="star-pick" id="starPick"><button data-v="1">★</button><button data-v="2">★</button><button data-v="3">★</button><button data-v="4">★</button><button data-v="5">★</button></div>
+  <div class="form-group" style="text-align:left"><label>Отзыв (необязательно)</label><textarea id="reviewText"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn btn-light" onclick="closeModal('reviewModal')">Отмена</button>
+    <button class="btn" id="btnReview"><i class="fa-solid fa-paper-plane"></i>Отправить</button>
+  </div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/prescription.js"></script>
+<script src="/js/patient.js"></script>
+</body>
+</html>
